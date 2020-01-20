@@ -12,36 +12,33 @@ from reqs.live_daily_job import (
     SendGiftReq,
     ExchangeSilverCoinReq,
 )
-from .task_func_decorator import unique
-from .base_class import SchedTask
+from .base_class import Sched, DontWait, Unique
 
 
-class HeartBeatTask(SchedTask):
+class HeartBeatTask(Sched, DontWait, Unique):
     TASK_NAME = 'heartbeat'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
         
     @staticmethod
-    @unique
     async def work(user):
         while True:
-            json_rsp = await user.req_s(HeartBeatReq.pc_heartbeat, user)
-            # print(json_rsp)
-            user.info('心跳包(5分钟左右间隔)')
-            json_rsp = await user.req_s(HeartBeatReq.app_heartbeat, user)
-            print(json_rsp)
+            json_rsp0 = await user.req_s(HeartBeatReq.pc_heartbeat, user)
+            json_rsp1 = await user.req_s(HeartBeatReq.app_heartbeat, user)
+            user.info(f'心跳包(5分钟左右间隔){json_rsp0} {json_rsp1}')
             await asyncio.sleep(300)
 
                 
-class RecvHeartGiftTask(SchedTask):
+class RecvHeartGiftTask(Sched, DontWait, Unique):
     TASK_NAME = 'recv_heart_gift'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
         
     @staticmethod
-    @unique
     async def work(user):
         while True:
             json_rsp = await user.req_s(RecvHeartGiftReq.recv_heartgift, user)
@@ -51,14 +48,14 @@ class RecvHeartGiftTask(SchedTask):
             await asyncio.sleep(300)
  
                
-class OpenSilverBoxTask(SchedTask):
+class OpenSilverBoxTask(Sched, DontWait, Unique):
     TASK_NAME = 'open_silver_box'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
                 
     @staticmethod
-    @unique
     async def work(user):
         while True:
             user.info("检查宝箱状态")
@@ -92,14 +89,14 @@ class OpenSilverBoxTask(SchedTask):
                 return
 
                 
-class RecvDailyBagTask(SchedTask):
+class RecvDailyBagTask(Sched, DontWait, Unique):
     TASK_NAME = 'recv_daily_bag'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
         
     @staticmethod
-    @unique
     async def work(user):
         json_rsp = await user.req_s(RecvDailyBagReq.recv_dailybag, user)
         try:
@@ -110,32 +107,27 @@ class RecvDailyBagTask(SchedTask):
             user.info(f'获得-{i["bag_name"]}-成功')
 
                 
-class SignTask(SchedTask):
+class SignTask(Sched, DontWait, Unique):
     TASK_NAME = 'sign'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
         
     @staticmethod
-    @unique
     async def work(user):
-        while True:
-            json_rsp = await user.req_s(SignReq.sign, user)
-            user.info(f'签到状态: {json_rsp["msg"]}')
-            if json_rsp['code'] == -500 and '已' in json_rsp['msg']:
-                return
-            sleeptime = 350
-            await asyncio.sleep(sleeptime)
+        json_rsp = await user.req_s(SignReq.sign, user)
+        user.info(f'签到状态: {json_rsp["message"]}')
         
         
-class WatchTvTask(SchedTask):
+class WatchTvTask(Sched, DontWait, Unique):
     TASK_NAME = 'watch_tv'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
    
     @staticmethod
-    @unique
     async def work(user):
         while True:
             # -400 done/not yet
@@ -147,14 +139,14 @@ class WatchTvTask(SchedTask):
             await asyncio.sleep(sleeptime)
         
         
-class SignFansGroupsTask(SchedTask):
+class SignFansGroupsTask(Sched, DontWait, Unique):
     TASK_NAME = 'sign_fans_group'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
    
     @staticmethod
-    @unique
     async def work(user):
         json_rsp = await user.req_s(SignFansGroupsReq.fetch_groups, user)
         for group in json_rsp['data']['list']:
@@ -171,8 +163,9 @@ class SignFansGroupsTask(SchedTask):
                 user.info(f'应援团 {group_id} 应援失败')
             
             
-class SendGiftTask(SchedTask):
+class SendGiftTask(Sched, DontWait, Unique):
     TASK_NAME = 'send_gift'
+
     @staticmethod
     async def check(user):
         gift_intimacy = await SendGiftTask.fetch_gift_intimacy(user)
@@ -289,31 +282,21 @@ class SendGiftTask(SchedTask):
         return [gift for gift in gift_bags if gift[1]]  # 过滤掉送光了的礼物包
         
     @staticmethod
-    @unique
     async def work(user, gift_intimacy: dict):
         await SendGiftTask.send_medal_gift(user, gift_intimacy)
         await SendGiftTask.send_expiring_gift(user, gift_intimacy)
 
                 
-class ExchangeSilverCoinTask(SchedTask):
+class ExchangeSilverCoinTask(Sched, DontWait, Unique):
     TASK_NAME = 'exchange_silver_coin'
+
     @staticmethod
     async def check(_):
         return (-2, (0, 30)),
      
     @staticmethod
-    @unique
     async def work(user):
-        while True:
-            if not user.task_ctrl['silver2coin']:
-                return
-            json_rsp = await user.req_s(ExchangeSilverCoinReq.silver2coin_web, user)
-            user.info(f'{json_rsp["msg"]}')
-            if json_rsp['code'] == 403 and '最多' in json_rsp['msg']:
-                finish_web = True
-            else:
-                finish_web = False
-            if finish_web:
-                return
-            sleeptime = 350
-            await asyncio.sleep(sleeptime)
+        if not user.task_ctrl['silver2coin']:
+            return
+        json_rsp = await user.req_s(ExchangeSilverCoinReq.silver2coin_web, user)
+        user.info(f'银瓜子兑换为硬币：{json_rsp["msg"]}')

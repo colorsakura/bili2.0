@@ -1,19 +1,19 @@
 import bili_statistics
 from reqs.tv_raffle_handler import TvRaffleHandlerReq
 from tasks.utils import UtilsTask
-from .task_func_decorator import normal
-from .base_class import ForcedTask
+from .base_class import Forced, DontWait, Multi
 
 
-class TvRaffleJoinTask(ForcedTask):
+class TvRaffleJoinTask(Forced, DontWait, Multi):
     TASK_NAME = 'join_tv_raffle'
+
     # 这是superuser做的,做完之后就broadcast
     @staticmethod
-    async def check(user, real_roomid):
+    async def check(user, real_roomid, json_rsp=None):
         if not await UtilsTask.is_normal_room(user, real_roomid):
             return None
-        json_rsp = await user.req_s(TvRaffleHandlerReq.check, user, real_roomid)
-
+        if json_rsp is None:
+            json_rsp = await user.req_s(TvRaffleHandlerReq.check, user, real_roomid)
         next_step_settings = []
         for raffle in json_rsp['data']['gift']:
             raffle_id = raffle['raffleId']
@@ -29,7 +29,6 @@ class TvRaffleJoinTask(ForcedTask):
         return next_step_settings
         
     @staticmethod
-    @normal
     async def work(user, real_roomid, raffle_id, raffle_type):
         json_rsp = await user.req_s(TvRaffleHandlerReq.join, user, real_roomid, raffle_id, raffle_type)
         bili_statistics.add2joined_raffles('小电视(合计)', user.id)

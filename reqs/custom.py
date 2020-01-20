@@ -9,11 +9,33 @@ class BuyLatiaoReq:
         url = f'{API_LIVE}/xlive/web-ucenter/user/get_user_info'
         json_rsp = await user.bililive_session.request_json('GET', url, headers=user.dict_bili['pcheaders'])
         return json_rsp
-        
-        
+
+
 class BuyMedalReq:
     @staticmethod
     async def buy_medal(user, uid, coin_type):
-        url = f'https://api.vc.bilibili.com/link_group/v1/member/buy_medal?coin_type={coin_type}&master_uid={uid}&platform=android'
-        json_rsp = await user.other_session.request_json('GET', url, headers=user.dict_bili['pcheaders'])
+        url = f'https://api.vc.bilibili.com/link_group/v1/member/buy_medal'
+        data = {
+            'coin_type': coin_type,
+            'master_uid': uid,
+            'platform': 'android',
+            'csrf_token': user.dict_bili['csrf'],
+            'csrf': user.dict_bili['csrf']
+        }
+        json_rsp = await user.other_session.request_json('POST', url, data=data, headers=user.dict_bili['pcheaders'])
+        return json_rsp
+
+
+class BanUserReq:
+    @staticmethod
+    async def ban_user(user, room_id: int, uid: int, hour: int):
+        url = f'{API_LIVE}/banned_service/v2/Silent/add_block_user'
+        data = {
+            'roomid': room_id,
+            'block_uid': uid,
+            'hour': hour,
+            'csrf_token': user.dict_bili['csrf'],
+            'csrf': user.dict_bili['csrf'],
+        }
+        json_rsp = await user.other_session.request_json('POST', url, data=data, headers=user.dict_bili['pcheaders'])
         return json_rsp
